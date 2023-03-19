@@ -4,15 +4,29 @@ export enum Symbol {
   O = "O",
 }
 
-export type Table = Symbol[][];
+export type Cell = {
+  symbol: Symbol;
+  isWinTrace: boolean;
+};
+
+export type Table = Cell[][];
+
+export type WinResult = {
+  win: boolean;
+  trace: Table;
+};
 
 export class TicTacToe {
   private static symbols = [Symbol.X, Symbol.O];
 
+  private static makeRowWinTrace(table: Table, row: number): Cell[] {
+    return table[row].map(({ symbol }) => ({ symbol, isWinTrace: true }));
+  }
+
   public static getNextSymbol(symbol: Symbol): Symbol {
     switch (symbol) {
       case Symbol.Empty:
-        return TicTacToe.getRandomSymbol(TicTacToe.symbols);
+        return this.getRandomSymbol(this.symbols);
       case Symbol.X:
         return Symbol.O;
       case Symbol.O:
@@ -24,7 +38,7 @@ export class TicTacToe {
     table: Table,
     row: number,
     column: number,
-    symbol: Symbol
+    cell: Cell
   ): Table {
     const dimension = table.length;
 
@@ -32,13 +46,15 @@ export class TicTacToe {
       throw Error(`invalid position (${row}, ${column})`);
     }
 
-    if (TicTacToe.getTableAt(table, row, column) !== Symbol.Empty) {
+    if (this.getTableAt(table, row, column)?.symbol !== Symbol.Empty) {
       return table;
     }
 
     const newTable = table.map((line, x) => {
       return x === row
-        ? line.map((value, y) => (y === column ? symbol : value))
+        ? line.map((value, y) => {
+            return y === column ? cell : value;
+          })
         : line;
     });
 
@@ -47,7 +63,7 @@ export class TicTacToe {
 
   public static hasWinner(table: Table): boolean {
     const tableContainsOnlyEmptySymbol = table.every((row) =>
-      row.every((symbol) => symbol === Symbol.Empty)
+      row.every(({ symbol }) => symbol === Symbol.Empty)
     );
 
     if (tableContainsOnlyEmptySymbol) {
@@ -55,85 +71,116 @@ export class TicTacToe {
     }
 
     return (
-      TicTacToe.checkRowWin(table) ||
-      TicTacToe.checkColumnWin(table) ||
-      TicTacToe.checkDiagonalWin(table)
+      this.checkRowWin(table) ||
+      this.checkColumnWin(table) ||
+      this.checkDiagonalWin(table)
     );
   }
 
   public static hasDraw(table: Table): boolean {
-    return table.every((row) => !row.includes(Symbol.Empty));
+    return table.every((row) => {
+      return row.every(({ symbol }) => symbol !== Symbol.Empty);
+    });
   }
 
   public static getTableAt(
     table: Table,
     row: number,
     column: number
-  ): Symbol | undefined {
+  ): Cell | undefined {
     return table.at(row)?.at(column);
   }
 
   public static checkDiagonalWin(table: Table): boolean {
     return (
-      TicTacToe.checkPrimaryDiagonalWin(table) ||
-      TicTacToe.checkSecondaryDiagonalWin(table)
+      this.checkPrimaryDiagonalWin(table) ||
+      this.checkSecondaryDiagonalWin(table)
     );
   }
 
-  public static getRandomSymbol(array: Symbol[] = TicTacToe.symbols): Symbol {
+  public static getRandomSymbol(array: Symbol[] = this.symbols): Symbol {
     return array[Math.floor(Math.random() * array.length)];
   }
 
-  private static checkRowWin(table: Table): boolean {
-    const dimension = table.length;
-    const trace = Array.from({ length: dimension }).fill(
-      Array.from({ length: dimension }).fill(Symbol.Empty)
+  public static getEmptyTable(dimension: number): Table {
+    return Array.from({ length: dimension }).fill(
+      Array.from({ length: dimension }).fill({
+        symbol: Symbol.Empty,
+        isWinTrace: false,
+      })
     ) as Table;
+  }
 
-    return table.some((row, x) => {
-      const symbol = row.at(0);
-
-      return row.every((value, y) => {
-        trace[x][y] = value;
-        return symbol !== Symbol.Empty && value === symbol;
+  private static checkRowWin(table: Table): boolean {
+    const win = table.some((row, x) => {
+      const { symbol } = row[0];
+      const isInWinningRow = row.every((cell) => {
+        return symbol !== Symbol.Empty && cell.symbol === symbol;
       });
+
+      if (isInWinningRow) {
+        table[x] = this.makeRowWinTrace(table, x);
+      }
+
+      return isInWinningRow;
     });
+
+    return win;
   }
 
   private static checkColumnWin(table: Table): boolean {
     const dimension = table.length;
+    let columnIndex = -1;
+    let win = false;
 
     for (let row = 0; row < dimension; ++row) {
-      const columnSymbol = TicTacToe.getTableAt(table, 0, row);
+      const currentCell = this.getTableAt(table, 0, row) as Cell;
+      const columnSymbol = currentCell.symbol;
 
       for (let column = 1; column < dimension; ++column) {
-        if (TicTacToe.getTableAt(table, column, row) !== columnSymbol) {
+        if (this.getTableAt(table, column, row)?.symbol !== columnSymbol) {
           break;
         }
 
         if (column === dimension - 1 && columnSymbol !== Symbol.Empty) {
-          return true;
+          columnIndex = row;
+          win = true;
         }
       }
     }
 
-    return false;
+    if (columnIndex >= 0) {
+      for (let index = 0; index < dimension; ++index) {
+        const cell = this.getTableAt(table, index, columnIndex) as Cell;
+        table[index][columnIndex] = { ...cell, isWinTrace: true };
+      }
+    }
+
+    return win;
   }
 
   private static checkPrimaryDiagonalWin(table: Table): boolean {
     const dimension = table.length;
-    const primarySymbol = TicTacToe.getTableAt(table, 0, 0);
+    const { symbol: primarySymbol } = this.getTableAt(table, 0, 0) as Cell;
 
     if (primarySymbol === Symbol.Empty) {
       return false;
     }
 
     for (let index = 1; index < dimension; ++index) {
-      const primaryDiagonalSymbol = TicTacToe.getTableAt(table, index, index);
+      const { symbol: primaryDiagonalSymbol } = this.getTableAt(
+        table,
+        index,
+        index
+      ) as Cell;
 
       if (primarySymbol !== primaryDiagonalSymbol) {
         return false;
       }
+    }
+    for (let index = 0; index < dimension; ++index) {
+      const cell = table[index][index];
+      table[index][index] = { ...cell, isWinTrace: true };
     }
 
     return true;
@@ -141,7 +188,11 @@ export class TicTacToe {
 
   private static checkSecondaryDiagonalWin(table: Table): boolean {
     const dimension = table.length;
-    const secondarySymbol = TicTacToe.getTableAt(table, 0, dimension - 1);
+    const { symbol: secondarySymbol } = this.getTableAt(
+      table,
+      0,
+      dimension - 1
+    ) as Cell;
 
     if (secondarySymbol === Symbol.Empty) {
       return false;
@@ -149,11 +200,21 @@ export class TicTacToe {
 
     for (let row = 1; row < dimension; ++row) {
       const column = dimension - row - 1;
-      const secondaryDiagonalSymbol = TicTacToe.getTableAt(table, row, column);
+      const { symbol: secondaryDiagonalSymbol } = this.getTableAt(
+        table,
+        row,
+        column
+      ) as Cell;
 
       if (secondaryDiagonalSymbol !== secondarySymbol) {
         return false;
       }
+    }
+
+    for (let row = 0; row < dimension; ++row) {
+      const column = dimension - row - 1;
+      const cell = table[row][column];
+      table[row][column] = { ...cell, isWinTrace: true };
     }
 
     return true;

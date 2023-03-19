@@ -4,8 +4,8 @@ import { Symbol, Table, TicTacToe } from "../logic/TicTacToe";
 export interface State {
   draw: boolean;
   dimension: number;
-  winner: Symbol;
   currentSymbol: Symbol;
+  winner: Symbol;
   table: Table;
 }
 
@@ -26,7 +26,7 @@ const initialState = {
   currentSymbol: Symbol.Empty,
   winner: Symbol.Empty,
   table: Array.from({ length: 3 }).fill(
-    Array.from({ length: 3 }).fill(Symbol.Empty)
+    Array.from({ length: 3 }).fill({ symbol: Symbol.Empty, isWinTrace: false })
   ) as Table,
 };
 
@@ -39,15 +39,14 @@ export function useTicTacToe(): TicTacToeResult {
   const cellWidth = tableWidth / dimension;
   const cellHeight = tableHeight / dimension;
 
-  const setWinner = (winner: Symbol) => {
-    setState((oldState) => ({ ...oldState, winner }));
-  };
-
   const updateTableAt = (row: number, column: number, symbol: Symbol) => {
     setState((oldState) => {
       return {
         ...oldState,
-        table: TicTacToe.updateTableAt(oldState.table, row, column, symbol),
+        table: TicTacToe.updateTableAt(oldState.table, row, column, {
+          symbol,
+          isWinTrace: false,
+        }),
         currentSymbol: symbol,
       };
     });
@@ -73,7 +72,10 @@ export function useTicTacToe(): TicTacToeResult {
     if (TicTacToe.hasDraw(table)) {
       setState((oldState) => ({ ...oldState, draw: true }));
     } else if (TicTacToe.hasWinner(table)) {
-      setWinner(currentSymbol);
+      setState((oldState) => ({
+        ...oldState,
+        winner: currentSymbol,
+      }));
     }
   }, [table]);
 

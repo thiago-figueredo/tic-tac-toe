@@ -26,16 +26,22 @@ function App() {
     <div className="table" style={{ width: tableWidth, height: tableHeight }}>
       {state.table.map((line, row) => (
         <div className="line" key={row}>
-          {line.map((element, column) => (
-            <p
-              key={`${row}-${column}`}
-              className="cell"
-              style={{ width: cellWidth, height: cellHeight }}
-              onClick={() => markCell(row, column)}
-            >
-              {element}
-            </p>
-          ))}
+          {line.map(({ symbol, isWinTrace }, column) => {
+            return (
+              <p
+                key={`${row}-${column}`}
+                className="cell"
+                style={{
+                  width: cellWidth,
+                  height: cellHeight,
+                  background: isWinTrace ? "green" : "",
+                }}
+                onClick={() => markCell(row, column)}
+              >
+                {symbol}
+              </p>
+            );
+          })}
         </div>
       ))}
 
