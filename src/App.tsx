@@ -1,24 +1,85 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import { CSSProperties } from "react";
+import "./App.css";
+import { useTicTacToe } from "./hooks/useTicTacToe";
+import { Symbol } from "./logic/TicTacToe";
 
 function App() {
+  const {
+    state,
+    resetState,
+    tableHeight,
+    tableWidth,
+    cellHeight,
+    cellWidth,
+    markCell,
+  } = useTicTacToe();
+
+  const css = {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    marginLeft: "auto",
+    marginRight: "auto",
+  } as CSSProperties;
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
+    <div className="table" style={{ width: tableWidth, height: tableHeight }}>
+      {state.table.map((line, row) => (
+        <div className="line" key={row}>
+          {line.map((element, column) => (
+            <p
+              key={`${row}-${column}`}
+              className="cell"
+              style={{ width: cellWidth, height: cellHeight }}
+              onClick={() => markCell(row, column)}
+            >
+              {element}
+            </p>
+          ))}
+        </div>
+      ))}
+
+      <button
+        style={{
+          ...css,
+          width: cellWidth,
+          bottom: "-10rem",
+          padding: "2rem",
+          fontSize: "large",
+          cursor: "pointer",
+        }}
+        onClick={resetState}
+      >
+        Restart
+      </button>
+
+      {state.winner !== Symbol.Empty && (
+        <h2
+          style={{
+            ...css,
+            textAlign: "center",
+            fontSize: "x-large",
+            color: "snow",
+            bottom: "-13rem",
+          }}
         >
-          Learn React
-        </a>
-      </header>
+          Winner: {state.winner}
+        </h2>
+      )}
+
+      {state.draw && (
+        <h2
+          style={{
+            ...css,
+            textAlign: "center",
+            fontSize: "x-large",
+            color: "snow",
+            bottom: "-13rem",
+          }}
+        >
+          Draw
+        </h2>
+      )}
     </div>
   );
 }
